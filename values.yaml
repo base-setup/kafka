@@ -1,0 +1,96 @@
+clusterName: &clusterName dev-kafka
+kafkaVersion: &kafkaVersion 3.8.0
+kafka:
+  annotations: {}
+  version: *kafkaVersion
+  mode: kraft
+  replicas: 3
+  config:
+    offsets.topic.replication.factor: 3
+    transaction.state.log.replication.factor: 3
+    transaction.state.log.min.isr: 2
+    default.replication.factor: 3
+    min.insync.replicas: 2
+    inter.broker.protocol.version: "3.8"
+  storage:
+    type: persistent-claim
+    size: 10Gi
+    deleteClaim: false
+zookeeper:
+  replicas: 3
+  storage:
+    type: persistent-claim
+    size: 10Gi
+    deleteClaim: false
+nodePools:
+  - name: mixed
+    replicas: 3
+    roles:
+      - controller
+      - broker
+    storage:
+      type: persistent-claim
+      size: 10Gi
+      deleteClaim: false
+topics:
+  - name: connect-cluster-offsets
+    partitions: 1
+    replicas: 3
+    config:
+      cleanup.policy: compact
+  - name: connect-cluster-configs
+    partitions: 1
+    replicas: 3
+    config:
+      cleanup.policy: compact
+  - name: connect-cluster-status
+    partitions: 1
+    replicas: 3
+    config:
+      cleanup.policy: compact
+
+kafkaConnect:
+  - name: debezium-pg
+    version: *kafkaVersion
+    image: ratiborec/kafkaconnect-debezium-postgres:2.7.2.Final
+    replicas: 1
+    # bootstrapServers Generated inside template
+    config:
+      config.providers: secrets
+      config.providers.secrets.class: io.strimzi.kafka.KubernetesSecretConfigProvider
+      group.id: *clusterName
+      offset.storage.topic: connect-cluster-offsets
+      config.storage.topic: connect-cluster-configs
+      status.storage.topic: connect-cluster-status
+      config.storage.replication.factor: -1
+      offset.storage.replication.factor: -1
+      status.storage.replication.factor: -1
+
+#kafkaConnectors:
+#  - name: debezium-pg-office
+#    class: io.debezium.connector.postgresql.PostgresConnector
+#    taskMax: 1
+#    config:
+#      offset.storage.file.filename: /debezium/data/offsets.dat
+#      database.history: io.debezium.relational.history.FileDatabaseHistory
+#      database.hostname: pg-office-postgresql-ha-postgresql-0 #??
+#      database.port: 5432
+#      database.user: postgres
+#      database.password: ${secrets:pg-office/pg-office-postgresql-ha-postgresql:password}
+#      database.dbname: debezium
+#      topic.prefix: connect
+#      schema.include.list: connect
+
+kafka-ui:
+  enabled: true
+  yamlApplicationConfig:
+    kafka:
+      clusters:
+        - name: *clusterName
+          bootstrapServers: dev-kafka-kafka-brokers.kafka.svc.cluster.local:9092
+    auth:
+      type: disabled
+    management:
+      health:
+        ldap:
+          enabled: false

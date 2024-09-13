@@ -1,0 +1,20 @@
+{{- range .Values.kafkaConnect }}
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnect
+metadata:
+  name: {{ $.Release.Name }}-{{ .name }}
+  namespace: {{ $.Release.Namespace }}
+  annotations:
+    strimzi.io/use-connector-resources: "true"
+    strimzi.io/cluster: {{ $.Values.clusterName }}
+spec:
+  version: {{ .version }}
+  image: {{ .image }}
+  replicas: {{ .replicas }}
+  bootstrapServers: {{ $.Values.clusterName }}-kafka-brokers.{{ $.Release.Name }}.svc.cluster.local:9092
+  {{- with .config }}
+  config:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+---
+{{- end }}

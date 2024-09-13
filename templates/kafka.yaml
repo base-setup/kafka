@@ -1,0 +1,58 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: {{ .Values.clusterName }}
+  annotations:
+    {{- if eq .Values.kafka.mode "kraft" }}
+    strimzi.io/node-pools: enabled
+    strimzi.io/kraft: enabled
+    {{- end }}
+    {{- with .Values.kafka.annotations }}
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+spec:
+  kafka:
+    version: {{ .Values.kafka.version }}
+    replicas: {{ .Values.kafka.replicas }}
+    listeners:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+    {{- with .Values.kafka.config }}
+    config:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    storage:
+      type: {{ .Values.kafka.storage.type }}
+      {{- if eq .Values.kafka.storage.type "jbod" }}
+        {{- with .Values.kafka.storage.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- else }}
+      size: {{ .Values.kafka.storage.size }}
+      deleteClaim: {{ .Values.kafka.storage.deleteClaim }}
+      {{- end }}
+  {{- if eq .Values.kafka.mode "zookeeper" }}
+  zookeeper:
+    replicas: {{ .Values.zookeeper.replicas }}
+    storage:
+      type: {{ .Values.zookeeper.storage.type }}
+      {{- if eq .Values.zookeeper.storage.type "jbod" }}
+        {{- with .Values.zookeeper.storage.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- else }}
+      size: {{ .Values.zookeeper.storage.size }}
+      deleteClaim: {{ .Values.zookeeper.storage.deleteClaim }}
+      {{- end }}
+  {{- end }}
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}

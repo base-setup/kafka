@@ -1,0 +1,28 @@
+{{- if eq .Values.kafka.mode "kraft" }}
+{{- range .Values.nodePools }}
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaNodePool
+metadata:
+  name: {{ .name }}
+  labels:
+    strimzi.io/cluster: {{ $.Values.clusterName }}
+spec:
+  replicas: {{ .replicas }}
+  roles:
+    {{- range .roles }}
+    - {{ . }}
+  {{- end }}
+  storage:
+    type: {{ .storage.type }}
+    {{- if eq .storage.type "jbod" }}
+      {{- with .storage.volumes }}
+    volumes:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- else }}
+    size: {{ .storage.size }}
+    deleteClaim: {{ .storage.deleteClaim }}
+    {{- end }}
+---
+{{- end }}
+{{- end }}
