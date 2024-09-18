@@ -11,18 +11,25 @@ metadata:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 spec:
+  clusterCa:
+    generateCertificateAuthority: {{ .Values.clusterGenerateCertificateAuthority | default false }}
+  clientsCa:
+    generateCertificateAuthority: {{ .Values.clientsGenerateCertificateAuthority | default false }}
   kafka:
     version: {{ .Values.kafka.version }}
-    replicas: {{ .Values.kafka.replicas }}
+    replicas:
+    {{- with .Values.kafka.listeners }}
     listeners:
-      - name: plain
-        port: 9092
-        type: internal
-        tls: false
-      - name: tls
-        port: 9093
-        type: internal
-        tls: true
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.kafka.authorization }}
+    authorization:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.kafka.logging }}
+    logging:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
     {{- with .Values.kafka.config }}
     config:
       {{- toYaml . | nindent 6 }}

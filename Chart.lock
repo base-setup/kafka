@@ -1,0 +1,6 @@
+dependencies:
+- name: kafka-ui
+  repository: https://provectus.github.io/kafka-ui-charts
+  version: 0.7.6
+digest: sha256:d83026f3260e83158422d5728a96ae8471f96241de6190581dae531506f8c291
+generated: "2024-09-11T15:30:23.687707799+03:00"

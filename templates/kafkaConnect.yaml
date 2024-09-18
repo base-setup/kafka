@@ -7,11 +7,25 @@ metadata:
   annotations:
     strimzi.io/use-connector-resources: "true"
     strimzi.io/cluster: {{ $.Values.clusterName }}
+  {{- with .annotations }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   version: {{ .version }}
   image: {{ .image }}
   replicas: {{ .replicas }}
-  bootstrapServers: {{ $.Values.clusterName }}-kafka-brokers.{{ $.Release.Name }}.svc.cluster.local:9092
+  bootstrapServers: {{ .bootstrapServers }}
+  tls:
+    {{- with .tls.trustedCertificates }}
+    trustedCertificates:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  authentication:
+    type: {{ .authentication.type | default }}
+    {{- with .authentication.certificateAndKey }}
+    certificateAndKey:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
   {{- with .config }}
   config:
     {{- toYaml . | nindent 4 }}

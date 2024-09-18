@@ -1,27 +1,64 @@
-clusterName: &clusterName dev-kafka
+clusterName: &clusterName sdlc-kafka
 kafkaVersion: &kafkaVersion 3.8.0
+
+clusterGenerateCertificateAuthority: false
+clientsGenerateCertificateAuthority: false
 kafka:
   annotations: {}
   version: *kafkaVersion
   mode: kraft
   replicas: 3
+  listeners:
+    - name: plain
+      port: 9092
+      type: internal
+      tls: false
+    - name: oauth
+      port: 9093
+      type: internal
+      tls: true
+#      authentication:
+#        type: oauth
+#        clientId: kafka
+#        clientSecret:
+#          secretName: keycloak-client-secret
+#          key: clientSecret
+#        tlsTrustedCertificates:
+#          - secretName: keycloak-ca-cert
+#            pattern: "*.crt"
+##        validIssuerUri: https://keycloak-headless.keycloak.svc.cluster.local:8443/auth/realms/kafka-authz
+#        jwksEndpointUri: https://keycloak-headless.keycloak.svc.cluster.local:8443/auth/realms/kafka-authz/protocol/openid-connect/certs
+#        disableTlsHostnameVerification: true
+#        userNameClaim: preferred_username
+#        checkAccessTokenType: false
+#        customClaimCheck: "@.typ && @.typ == 'Bearer'"
+#        maxSecondsWithoutReauthentication: 3600
+#  authorization:
+#    type: keycloak
+#    tokenEndpointUri: https://keycloak-headless.keycloak.svc.cluster.local:8443/auth/realms/kafka-authz/protocol/openid-connect/token
+#    delegateToKafkaAcls: true
+#    tlsTrustedCertificates:
+#      - secretName: keycloak-ca-cert
+#        pattern: "*.crt"
+#    superUsers:
+#      - user-1
   config:
     offsets.topic.replication.factor: 3
     transaction.state.log.replication.factor: 3
     transaction.state.log.min.isr: 2
     default.replication.factor: 3
     min.insync.replicas: 2
-    inter.broker.protocol.version: "3.8"
+    security.inter.broker.protocol: SSL
   storage:
     type: persistent-claim
     size: 10Gi
     deleteClaim: false
-zookeeper:
-  replicas: 3
-  storage:
-    type: persistent-claim
-    size: 10Gi
-    deleteClaim: false
+  logging:
+    type: inline
+    loggers:
+      log4j.logger.io.strimzi: "INFO"
+      log4j.logger.kafka: "INFO"
+      log4j.logger.org.apache.kafka: "INFO"
 nodePools:
   - name: mixed
     replicas: 3
@@ -48,13 +85,25 @@ topics:
     replicas: 3
     config:
       cleanup.policy: compact
-
 kafkaConnect:
   - name: debezium-pg
     version: *kafkaVersion
     image: ratiborec/kafkaconnect-debezium-postgres:2.7.2.Final
     replicas: 1
-    # bootstrapServers Generated inside template
+    annotations:
+      strimzi.io/restart: "true"
+    bootstrapServers: sdlc-kafka-kafka-bootstrap.sdlc-kafka.svc.cluster.local:9093
+    tls:
+      trustedCertificates:
+        - secretName: sdlc-kafka-cluster-ca-cert
+          pattern: "*.crt"
+    authentication:
+      type: "tls"
+      certificateAndKey:
+        # just to test
+        secretName: sdlc-kafka-cluster-operator-certs
+        certificate: cluster-operator.crt
+        key: cluster-operator.key
     config:
       config.providers: secrets
       config.providers.secrets.class: io.strimzi.kafka.KubernetesSecretConfigProvider
@@ -65,21 +114,23 @@ kafkaConnect:
       config.storage.replication.factor: -1
       offset.storage.replication.factor: -1
       status.storage.replication.factor: -1
+kafkaConnectors:
+  - name: debezium-pg-keycloak
+    connectName: debezium-pg
+    class: io.debezium.connector.postgresql.PostgresConnector
+    taskMax: 1
+    config:
+      offset.storage.file.filename: /debezium/data/offsets.dat
+      database.history: io.debezium.relational.history.FileDatabaseHistory
+      database.hostname: keycloak-postgresql
+      database.port: 5432
+      database.user: postgres
+      database.password: "uMw4gCTOnR"
+      database.dbname: bitnami_keycloak
+      plugin.name: pgoutput
+      topic.prefix: connect
+      schema.include.list: connect
 
-#kafkaConnectors:
-#  - name: debezium-pg-office
-#    class: io.debezium.connector.postgresql.PostgresConnector
-#    taskMax: 1
-#    config:
-#      offset.storage.file.filename: /debezium/data/offsets.dat
-#      database.history: io.debezium.relational.history.FileDatabaseHistory
-#      database.hostname: pg-office-postgresql-ha-postgresql-0 #??
-#      database.port: 5432
-#      database.user: postgres
-#      database.password: ${secrets:pg-office/pg-office-postgresql-ha-postgresql:password}
-#      database.dbname: debezium
-#      topic.prefix: connect
-#      schema.include.list: connect
 
 kafka-ui:
   enabled: true
@@ -87,7 +138,9 @@ kafka-ui:
     kafka:
       clusters:
         - name: *clusterName
-          bootstrapServers: dev-kafka-kafka-brokers.kafka.svc.cluster.local:9092
+          bootstrapServers: sdlc-kafka-kafka-bootstrap.sdlc-kafka.svc.cluster.local:9093
+        - name: kafka-http
+          bootstrapServers: sdlc-kafka-kafka-bootstrap.sdlc-kafka.svc.cluster.local:9092
     auth:
       type: disabled
     management:

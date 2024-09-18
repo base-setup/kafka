@@ -5,7 +5,7 @@ metadata:
   name: {{ $.Release.Name }}-{{ .name }}
   namespace: {{ $.Release.Namespace }}
   labels:
-    strimzi.io/cluster: {{ $.Values.clusterName }}
+    strimzi.io/cluster: {{ $.Release.Name }}-{{ .connectName }}
 spec:
   class: {{ .class }}
   tasksMax: {{ .taskMax }}
