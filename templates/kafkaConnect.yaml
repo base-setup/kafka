@@ -20,12 +20,14 @@ spec:
     trustedCertificates:
       {{- toYaml . | nindent 6 }}
     {{- end }}
+  {{- if .authentication }}
   authentication:
-    type: {{ .authentication.type | default }}
+    type: {{ .authentication.type }}
     {{- with .authentication.certificateAndKey }}
     certificateAndKey:
       {{- toYaml . | nindent 6 }}
     {{- end }}
+  {{- end }}
   {{- with .config }}
   config:
     {{- toYaml . | nindent 4 }}
