@@ -147,15 +147,6 @@ kafkaConnectors:
       primary.key.fields: "id"
       schema.evolution: basic
 
-test: {}
-#      quote.identifiers: true
-#      topics: "bn_keycloak.public.employees"
-#      table.name.format: "${source.table}"
-#      key.converter: "org.apache.kafka.connect.json.JsonConverter"
-#      value.converter: "org.apache.kafka.connect.json.JsonConverter"
-#      key.converter.schemas.enable: true
-#      value.converter.schemas.enable: true
-
 kafka-ui:
   enabled: true
   yamlApplicationConfig:

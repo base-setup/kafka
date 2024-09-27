@@ -9,11 +9,9 @@ metadata:
 spec:
   class: {{ .class }}
   tasksMax: {{ .taskMax }}
-  {{- if .autoRestart }}
   autoRestart:
     enabled: {{ .autoRestart.enabled | default false }}
     maxRestarts: {{ .autoRestart.maxRestarts | default }}
-  {{- end }}
   {{- with .config }}
   config:
     {{- toYaml . | nindent 4 }}

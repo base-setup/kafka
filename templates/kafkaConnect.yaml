@@ -15,18 +15,13 @@ spec:
   image: {{ .image }}
   replicas: {{ .replicas }}
   bootstrapServers: {{ .bootstrapServers }}
+  {{- with .tls }}
   tls:
-    {{- with .tls.trustedCertificates }}
-    trustedCertificates:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
-  {{- if .authentication }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with .authentication }}
   authentication:
-    type: {{ .authentication.type }}
-    {{- with .authentication.certificateAndKey }}
-    certificateAndKey:
-      {{- toYaml . | nindent 6 }}
-    {{- end }}
+    {{- toYaml . | nindent 4 }}
   {{- end }}
   {{- with .config }}
   config:
